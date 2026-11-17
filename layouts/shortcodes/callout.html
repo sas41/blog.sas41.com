@@ -1,0 +1,4 @@
+<aside class="callout"{{ with .Get "type" }} data-type="{{ . }}"{{ end }}>
+  {{ with .Get "title" }}<p class="callout-title">{{ . }}</p>{{ end }}
+  {{ .Inner | .Page.RenderString (dict "display" "block") }}
+</aside>

@@ -1,0 +1,37 @@
+baseURL = 'https://blog.sas41.com/'
+locale = 'en-US'
+title = "Sas's Blog"
+enableRobotsTXT = true
+timeZone = 'UTC'
+
+[params]
+  description = 'Notes on software, systems, and things worth writing down.'
+  author = 'SAS41'
+  comments = true
+
+  [params.remark42]
+    host = 'https://comments.blog.sas41.com'
+    site = 'blog.sas41.com'
+
+[markup.goldmark.renderer]
+  # Use the explicit html shortcode for exceptional trusted HTML.
+  unsafe = false
+
+[markup.highlight]
+  noClasses = false
+
+[markup.tableOfContents]
+  startLevel = 1
+  endLevel = 2
+  ordered = false
+
+[taxonomies]
+  category = 'categories'
+  tag = 'tags'
+
+[outputs]
+  home = ['HTML', 'RSS']
+
+[sitemap]
+  changeFreq = ''
+  priority = -1

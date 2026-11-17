@@ -1,0 +1,14 @@
+<nav class="breadcrumbs" aria-label="Breadcrumb" data-breadcrumbs>
+  <ol class="breadcrumb-pages">
+    <li>{{ if .IsHome }}<span aria-current="page">Home</span>{{ else }}<a href="/">Home</a>{{ end }}</li>
+    {{ if not .IsHome }}
+      {{ if eq .Type "post" }}
+        {{ range first 1 (.GetTerms "categories") }}<li><a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a></li>{{ end }}
+      {{ else if eq .Kind "term" }}
+        <li><a href="/categories/">Categories</a></li>
+      {{ end }}
+      <li><span aria-current="page" title="{{ .Title }}">{{ .Title }}</span></li>
+    {{ end }}
+  </ol>
+  {{ if .IsPage }}<ol class="breadcrumb-headings" aria-label="Current section" data-heading-trail hidden></ol>{{ end }}
+</nav>

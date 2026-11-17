@@ -1,0 +1,22 @@
+# Git history is required by the builder, but never copied into the runtime image.
+*
+!.git
+!.git/**
+!hugo.toml
+!layouts
+!layouts/**
+!assets
+!assets/**
+!static
+!static/**
+!content
+!content/**
+!scripts
+!scripts/**
+!tests
+!tests/**
+!requirements-build.txt
+!deploy
+!deploy/blog-nginx.conf
+**/__pycache__
+**/*.pyc

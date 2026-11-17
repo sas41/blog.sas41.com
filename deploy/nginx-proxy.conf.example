@@ -1,0 +1,58 @@
+# Merge these into your EXISTING nginx configuration; do not replace unrelated
+# sites. HTTP here is intentional: HAProxy terminates TLS upstream.
+#
+# SECURITY PREREQUISITE:
+# HAProxy must ONLY accept Cloudflare visitor-IP headers from Cloudflare IPs,
+# and overwrite X-Real-IP with that verified visitor IP. Restrict access to this
+# nginx listener to HAProxy. Replace the documentation-only address below with
+# HAProxy's actual direct-peer address. Never trust all addresses.
+
+server {
+    listen 80;
+    server_name blog.sas41.com;
+
+    set_real_ip_from 192.0.2.10; # REPLACE: HAProxy address
+    real_ip_header X-Real-IP;
+
+    location / {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host blog.sas41.com;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header CF-Connecting-IP "";
+        proxy_cache off;
+        proxy_intercept_errors off;
+    }
+}
+
+server {
+    listen 80;
+    server_name comments.blog.sas41.com;
+
+    set_real_ip_from 192.0.2.10; # REPLACE: HAProxy address
+    real_ip_header X-Real-IP;
+    client_max_body_size 6m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host comments.blog.sas41.com;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header CF-Connecting-IP "";
+        proxy_cache off;
+        proxy_no_cache 1;
+        proxy_cache_bypass 1;
+        proxy_hide_header Cache-Control;
+        add_header Cache-Control "no-store" always;
+        proxy_intercept_errors off;
+        proxy_read_timeout 60s;
+        # Do not add X-Frame-Options: DENY/SAMEORIGIN here: the blog embeds this
+        # service. Let Remark42 set its own CSP/CORS/authentication headers.
+    }
+}

@@ -1,0 +1,13 @@
+{{ $src := .Get "src" }}
+{{ $parsed := urls.Parse $src }}
+{{ if or (ne $parsed.Scheme "https") (not $parsed.Host) }}{{ errorf "Embed src must be an absolute HTTPS URL in %s" .Position }}{{ end }}
+<figure class="external-embed" data-embed-src="{{ $src }}" data-embed-title="{{ .Get "title" | default "External content" }}">
+  <div class="embed-placeholder">
+    <span class="mono">EXTERNAL CONTENT / {{ $parsed.Host }}</span>
+    <p>{{ .Get "title" | default "External content" }}</p>
+    <button type="button" class="load-comments" data-load-embed hidden>Load embed ↗</button>
+    <small>Loading connects your browser to {{ $parsed.Host }}.</small>
+    <noscript><a href="{{ $src }}">Open external content</a></noscript>
+  </div>
+  {{ with .Get "caption" }}<figcaption>{{ . }}</figcaption>{{ end }}
+</figure>

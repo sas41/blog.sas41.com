@@ -1,0 +1,10 @@
+{{ $enabled := site.Params.comments }}
+{{ if isset .Params "comments" }}{{ $enabled = .Params.comments }}{{ end }}
+{{ if and $enabled (not site.Params.disableComments) }}
+<section class="comments-section" aria-labelledby="comments-heading" data-comments-host="{{ site.Params.remark42.host }}" data-comments-site="{{ site.Params.remark42.site }}" data-comments-url="{{ printf "p/%s/" .Params.id | absURL }}" data-comments-title="{{ .Title }}">
+  <h2 id="comments-heading">The conversation</h2>
+  <button type="button" class="load-comments" data-load-comments hidden>Load comments <span aria-hidden="true">↓</span></button>
+  <div id="remark42"></div>
+  <noscript><p>Enable JavaScript to load comments.</p></noscript>
+</section>
+{{ end }}

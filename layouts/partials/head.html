@@ -1,0 +1,40 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+{{ $settings := resources.Get "js/reader-settings.js" | resources.Fingerprint "sha256" }}
+<script src="{{ $settings.RelPermalink }}" integrity="{{ $settings.Data.Integrity }}" data-cfasync="false"></script>
+{{ $title := site.Title }}
+{{ if not .IsHome }}{{ $title = printf "%s — %s" .Title site.Title }}{{ end }}
+{{ $description := .Description | default site.Params.description }}
+{{ $social := .Params.social | default dict }}
+{{ $socialTitle := $social.title | default .Title }}
+{{ $socialDescription := $social.description | default $description }}
+{{ $image := $social.image | default site.Params.socialImage }}
+<title>{{ $title }}</title>
+<meta name="description" content="{{ $description }}">
+<meta name="author" content="{{ site.Params.author }}">
+<link rel="canonical" href="{{ .Permalink }}">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="alternate" type="application/rss+xml" title="{{ site.Title }}" href="{{ "index.xml" | absURL }}">
+<meta property="og:site_name" content="{{ site.Title }}">
+<meta property="og:title" content="{{ $socialTitle }}">
+<meta property="og:description" content="{{ $socialDescription }}">
+<meta property="og:url" content="{{ .Permalink }}">
+<meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
+<meta name="twitter:card" content="{{ if $image }}summary_large_image{{ else }}summary{{ end }}">
+<meta name="twitter:title" content="{{ $socialTitle }}">
+<meta name="twitter:description" content="{{ $socialDescription }}">
+{{ with $image }}
+<meta property="og:image" content="{{ . | absURL }}">
+<meta name="twitter:image" content="{{ . | absURL }}">
+{{ with $social.image_alt }}<meta property="og:image:alt" content="{{ . }}"><meta name="twitter:image:alt" content="{{ . }}">{{ end }}
+{{ end }}
+{{ if .IsPage }}
+<meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+<meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">
+{{ $schema := dict "@context" "https://schema.org" "@type" "BlogPosting" "headline" .Title "description" $description "url" .Permalink "datePublished" (.Date.Format "2006-01-02T15:04:05Z07:00") "dateModified" (.Lastmod.Format "2006-01-02T15:04:05Z07:00") "author" (dict "@type" "Person" "name" site.Params.author) }}
+<script type="application/ld+json">{{ $schema | jsonify | safeJS }}</script>
+{{ end }}
+{{ $css := slice (resources.Get "css/fonts.css") (resources.Get "css/site.css") (resources.Get "css/reader.css") | resources.Concat "css/site.css" | resources.Fingerprint "sha256" }}
+<link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
+{{ partial "head-extra.html" . }}

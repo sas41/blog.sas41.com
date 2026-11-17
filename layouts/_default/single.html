@@ -1,0 +1,44 @@
+{{ define "main" }}
+<div class="reading-layout" data-reading-layout>
+  {{ partial "reader-controls.html" . }}
+  <div class="reader-rail reader-rail-left"><button type="button" class="reader-resize" data-resize="left" role="separator" aria-label="Article width, left edge" aria-orientation="vertical" aria-controls="post-content" aria-valuemin="520" aria-valuemax="1200" aria-valuenow="700" title="Drag to resize · arrow keys to adjust · double-click to reset" hidden></button></div>
+  <div class="reader-rail reader-rail-right"><button type="button" class="reader-resize" data-resize="right" role="separator" aria-label="Article width, right edge" aria-orientation="vertical" aria-controls="post-content" aria-valuemin="520" aria-valuemax="1200" aria-valuenow="700" title="Drag to resize · arrow keys to adjust · double-click to reset" hidden></button></div>
+<aside class="document-map" aria-labelledby="document-map-heading">
+  <details class="document-map-inner" data-document-map-disclosure>
+    <summary id="document-map-heading" aria-label="On this post" title="Toggle document map">
+      <svg class="document-map-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      <span class="document-map-label">On this post</span>
+      <svg class="document-map-logo" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1"/><path d="M6 9v9h7M6 12h7"/><rect x="13" y="9" width="8" height="6" rx="1"/><rect x="13" y="17" width="8" height="4" rx="1"/></svg>
+    </summary>
+    <nav aria-label="Document map" class="document-map-links" data-document-map>
+      <a class="map-overview" href="#post-{{ .Params.id }}-title">Overview</a>
+      {{ .TableOfContents | replaceRE `<nav[^>]*>` "" | replaceRE `</nav>` "" | safeHTML }}
+    </nav>
+  </details>
+</aside>
+<article class="post" data-post-id="{{ .Params.id }}">
+  <a class="back-link" href="/">← All writing</a>
+  <div class="post-dates mono">
+    <span>Posted <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Date.Format "2006-01-02" }}</time></span>
+    {{ with .Params.history }}{{ if gt .count 1 }}
+    <span class="date-divider" aria-hidden="true">/</span>
+    <a class="history-toggle" href="/history/{{ $.Params.id }}/" data-history-toggle aria-controls="revision-panel" aria-expanded="false">Last Edited <time datetime="{{ $.Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">{{ $.Lastmod.Format "2006-01-02" }}</time><span aria-hidden="true"> ↶</span></a>
+    {{ end }}{{ end }}
+  </div>
+  {{ with .Params.history }}{{ if gt .count 1 }}
+  <section id="revision-panel" class="revision-panel" data-history-manifest="{{ .manifest }}" hidden aria-label="Revision history">
+    <div class="revision-heading"><label for="revision-slider">Edit history</label><button type="button" class="text-button" data-history-close>Close <span aria-hidden="true">×</span></button></div>
+    <p class="revision-status mono" data-revision-status role="status" aria-live="polite">Loading revisions…</p>
+    <input id="revision-slider" type="range" min="0" max="{{ sub .count 1 }}" value="{{ sub .count 1 }}" step="1" aria-label="Published revision" list="revision-ticks" disabled>
+    <datalist id="revision-ticks">{{ range seq 0 (sub .count 1) }}<option value="{{ . }}"></option>{{ end }}</datalist>
+    <div class="revision-endpoints mono"><span>Original</span><button type="button" class="text-button" data-history-latest>Latest →</button></div>
+    <p class="history-error" data-history-error role="alert" hidden></p>
+    <a class="history-fallback" href="/history/{{ $.Params.id }}/">Browse all revisions without the slider ↗</a>
+  </section>
+  {{ end }}{{ end }}
+  <p class="old-revision-notice" data-old-revision hidden>You're reading an older revision. Comments apply to the post as a whole.</p>
+  <div id="post-content" data-article-content>{{ partial "article-content.html" . }}</div>
+  {{ partial "comments.html" . }}
+</article>
+</div>
+{{ end }}

@@ -1,0 +1,8 @@
+/public/
+/resources/
+/.hugo_build.lock
+/.env
+/.venv/
+/remark42-data/
+__pycache__/
+*.pyc

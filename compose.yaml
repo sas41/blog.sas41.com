@@ -1,0 +1,14 @@
+name: sas41-blog-dev
+
+services:
+  blog:
+    build:
+      context: .
+      target: development
+    environment:
+      HUGO_BASEURL: http://localhost:${BLOG_PORT:-8081}/
+      HUGO_PARAMS_DISABLECOMMENTS: "true"
+    volumes:
+      - .:/src:ro
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${BLOG_PORT:-8081}:8080"

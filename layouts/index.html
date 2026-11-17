@@ -1,0 +1,34 @@
+{{ define "main" }}
+<section class="home-intro">
+  <h1>{{ .Title }}</h1>
+  <div class="intro-copy">{{ .Content }}</div>
+</section>
+<section class="writing-section" aria-labelledby="writing-heading" data-post-filter>
+  {{ $posts := where site.RegularPages "Type" "post" }}
+  <div class="section-heading"><h2 id="writing-heading">Latest writing</h2><span class="mono">{{ len $posts }} {{ if eq (len $posts) 1 }}ENTRY{{ else }}ENTRIES{{ end }}</span></div>
+  <form class="post-filter" role="search" aria-label="Search writing" data-filter-form hidden>
+    <div class="post-filter-fields">
+      <label for="writing-search">Search writing<input id="writing-search" name="q" type="search" placeholder="Titles, summaries, or tags" data-filter-search></label>
+      <label for="writing-tags">Filter by tags<input id="writing-tags" name="tags" type="text" placeholder="software, systems" list="writing-tag-options" aria-describedby="writing-tags-help" data-filter-tags></label>
+      <button type="button" class="text-button" data-filter-clear>Clear filters</button>
+    </div>
+    <datalist id="writing-tag-options">{{ range site.Taxonomies.tags.Alphabetical }}<option value="{{ .Page.LinkTitle }}">{{ .Count }} {{ if eq .Count 1 }}post{{ else }}posts{{ end }}</option>{{ end }}</datalist>
+    <p id="writing-tags-help" class="filter-help">Comma-separated tags; posts must have every tag. <a href="/tags/">Browse all tags</a>.</p>
+    <p class="filter-status mono" role="status" aria-live="polite" aria-atomic="true" data-filter-status></p>
+  </form>
+  <noscript><p class="filter-help"><a href="/tags/">Browse writing by tag</a>.</p></noscript>
+  <div class="post-list">
+  {{ range $posts.ByDate.Reverse }}
+    <article class="post-card" data-post-card data-post-tags="{{ .Params.tags | default (slice) | jsonify }}">
+      <div class="post-card-meta"><time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006-01-02" }}</time><span>{{ .ReadingTime }} MIN READ</span>{{ range first 1 (.GetTerms "categories") }}<a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>{{ end }}</div>
+      <h3><a href="{{ .RelPermalink }}">{{ .Title }} <span class="post-arrow" aria-hidden="true">↗</span></a></h3>
+      <p data-post-summary>{{ .Description | default (.Summary | plainify | truncate 180) }}</p>
+      {{ partial "tags.html" . }}
+    </article>
+  {{ else }}
+    <p class="empty-state">Coming soon.</p>
+  {{ end }}
+  </div>
+  <p class="empty-state" data-filter-empty hidden>No matching posts.</p>
+</section>
+{{ end }}

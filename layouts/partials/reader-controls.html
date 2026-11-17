@@ -1,0 +1,29 @@
+<div class="reader-toolbar-slot" data-reader-slot>
+  <div class="reader-toolbar" data-reader-toolbar aria-label="Reading preferences" role="group" hidden>
+    <button type="button" class="reader-icon" data-reader-open="font" aria-label="Font" title="Font" aria-controls="reader-font-panel" aria-expanded="false">{{ partial "icon.html" "type" }}</button>
+    <button type="button" class="reader-icon" data-reader-open="size" aria-label="Font size" title="Font size" aria-controls="reader-size-panel" aria-expanded="false">{{ partial "icon.html" "a-large-small" }}</button>
+    <button type="button" class="reader-icon" data-reader-open="theme" aria-label="Light/dark mode" title="Light/dark mode" aria-controls="reader-theme-panel" aria-expanded="false">{{ partial "icon.html" "sun-moon" }}</button>
+  </div>
+</div>
+<section id="reader-font-panel" class="reader-popover" data-reader-panel="font" aria-label="Font preferences" hidden>
+  <label for="reader-font">Font</label>
+  <select id="reader-font" data-reader-font></select>
+  <button type="button" class="text-button" data-reader-reset>Reset reading preferences</button>
+</section>
+<section id="reader-size-panel" class="reader-popover" data-reader-panel="size" aria-label="Font size preferences" hidden>
+  <label for="reader-font-size">Font size</label>
+  <div class="reader-size" role="group" aria-label="Font size">
+      <button type="button" data-font-smaller aria-label="Decrease font size">A−</button>
+      <output data-font-size aria-live="polite">18px</output>
+      <button type="button" data-font-larger aria-label="Increase font size">A+</button>
+  </div>
+  <input id="reader-font-size" type="range" min="14" max="28" step="1" value="18" data-reader-size>
+  <button type="button" class="text-button" data-reader-reset>Reset reading preferences</button>
+</section>
+<section id="reader-theme-panel" class="reader-popover" data-reader-panel="theme" aria-label="Appearance preferences" hidden>
+  <fieldset><legend>Appearance</legend>
+    <label class="reader-mode"><input type="radio" name="reader-mode" value="dark" data-reader-mode checked>Dark</label>
+    <label class="reader-mode"><input type="radio" name="reader-mode" value="light" data-reader-mode>Light</label>
+  </fieldset>
+  <button type="button" class="text-button" data-reader-reset>Reset reading preferences</button>
+</section>

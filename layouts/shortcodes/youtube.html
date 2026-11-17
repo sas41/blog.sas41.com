@@ -1,0 +1,12 @@
+{{ $id := .Get "id" }}
+{{ if not (findRE `^[a-zA-Z0-9_-]{11}$` $id) }}{{ errorf "Invalid YouTube video ID %q in %s" $id .Position }}{{ end }}
+<figure class="external-embed" data-embed-src="https://www.youtube-nocookie.com/embed/{{ $id }}" data-embed-title="{{ .Get "title" | default "YouTube video" }}">
+  <div class="embed-placeholder">
+    <span class="mono">EXTERNAL VIDEO / YOUTUBE</span>
+    <p>{{ .Get "title" | default "YouTube video" }}</p>
+    <button type="button" class="load-comments" data-load-embed hidden>Load video ↗</button>
+    <small>Loading connects your browser to YouTube.</small>
+    <noscript><a href="https://www.youtube.com/watch?v={{ $id }}">Watch on YouTube</a></noscript>
+  </div>
+  {{ with .Get "caption" }}<figcaption>{{ . }}</figcaption>{{ end }}
+</figure>

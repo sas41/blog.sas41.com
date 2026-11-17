@@ -1,0 +1,72 @@
+name: Build and publish blog
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: blog-production
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: forgejo.ref == 'refs/heads/main'
+    # Register a trusted runner with this label, Docker/BuildKit, Git, curl,
+    # Node (for checkout), and access to the private Forgejo/registry.
+    runs-on: docker
+    timeout-minutes: 30
+    steps:
+      - name: Check out full history
+        uses: https://data.forgejo.org/actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build, test, and publish
+        shell: bash
+        env:
+          REGISTRY: ${{ vars.REGISTRY }}
+          IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+          REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          SOURCE_TOKEN: ${{ forgejo.token }}
+          SOURCE_ACTOR: ${{ forgejo.actor }}
+          COMMIT_SHA: ${{ forgejo.sha }}
+          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          DEPLOY_WEBHOOK_TOKEN: ${{ secrets.DEPLOY_WEBHOOK_TOKEN }}
+        run: |
+          set -euo pipefail
+          node --test tests/*.test.cjs
+          : "${REGISTRY:?Set the REGISTRY Actions variable (hostname only)}"
+          : "${IMAGE_NAME:?Set the IMAGE_NAME Actions variable (owner/image)}"
+          : "${REGISTRY_USER:?Set the REGISTRY_USER Actions secret}"
+          : "${REGISTRY_PASSWORD:?Set the REGISTRY_PASSWORD Actions secret}"
+          export DOCKER_CONFIG
+          DOCKER_CONFIG="$(mktemp -d)"
+          trap 'rm -f "$DOCKER_CONFIG/config.json"; rmdir "$DOCKER_CONFIG" 2>/dev/null || true' EXIT
+          printf '%s' "$REGISTRY_PASSWORD" | docker login "$REGISTRY" --username "$REGISTRY_USER" --password-stdin
+          image="$REGISTRY/$IMAGE_NAME"
+          docker build --pull --target production --build-arg "VCS_REF=$COMMIT_SHA" --tag "$image:sha-$COMMIT_SHA" .
+          docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges \
+            --tmpfs /tmp:uid=101,gid=101,mode=1770 "$image:sha-$COMMIT_SHA" -t
+          docker push "$image:sha-$COMMIT_SHA"
+
+          # A manually rerun old commit must not replace the current latest tag.
+          auth="$(printf '%s:%s' "$SOURCE_ACTOR" "$SOURCE_TOKEN" | base64 | tr -d '\n')"
+          head="$(git -c "http.extraHeader=AUTHORIZATION: basic $auth" ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$head" != "$COMMIT_SHA" ]; then
+            echo 'Published rollback tag only: main has moved on.'
+            exit 0
+          fi
+          docker tag "$image:sha-$COMMIT_SHA" "$image:latest"
+          docker push "$image:latest"
+
+          # Optional integration with YOUR deployment system, not a public shell
+          # endpoint provided by this project. The receiver pulls/recreates blog.
+          if [ -n "$DEPLOY_WEBHOOK_URL" ]; then
+            : "${DEPLOY_WEBHOOK_TOKEN:?Set a deployment webhook bearer token}"
+            curl --fail --silent --show-error --proto '=https' --max-time 60 \
+              --request POST --header "Authorization: Bearer $DEPLOY_WEBHOOK_TOKEN" \
+              --output /dev/null "$DEPLOY_WEBHOOK_URL"
+          fi

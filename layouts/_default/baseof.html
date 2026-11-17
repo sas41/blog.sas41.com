@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="{{ site.Language.Locale | default "en-US" }}">
+<head>
+  {{ partial "head.html" . }}
+</head>
+<body{{ if .IsPage }} class="is-reading-page"{{ end }}>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="site-topbar" data-topbar>
+    <div class="site-topbar-inner">
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label="SAS41 home">
+        <span class="wordmark-reveal" aria-hidden="true"><span>SAS</span></span>
+        <span class="wordmark-logo" aria-hidden="true"></span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="/"{{ if or .IsHome (eq .Type "post") }} aria-current="page"{{ end }}>Writing</a>
+        <a href="/about/"{{ if eq .RelPermalink "/about/" }} aria-current="page"{{ end }}>About</a>
+        <a href="/index.xml">RSS <span aria-hidden="true">↗</span></a>
+      </nav>
+      <div class="reader-dock" data-reader-dock></div>
+    </header>
+    {{ partial "breadcrumbs.html" . }}
+    </div>
+  </div>
+  <div class="site-shell">
+    <main id="main">{{ block "main" . }}{{ end }}</main>
+    <footer class="site-footer">
+      <span>Powered by Hugo, Remark42</span>
+      <a href="/licenses/">Licenses</a>
+      <span class="copyright">© {{ now.Year }} SAS<span class="brand-number">41</span></span>
+    </footer>
+  </div>
+  {{ $js := resources.Get "js/site.js" | resources.Fingerprint "sha256" }}
+  {{ $reader := resources.Get "js/reader.js" | resources.Fingerprint "sha256" }}
+  <script src="{{ $reader.RelPermalink }}" integrity="{{ $reader.Data.Integrity }}" defer data-cfasync="false"></script>
+  <script src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}" defer data-cfasync="false"></script>
+  {{ if .IsHome }}
+  {{ $filter := resources.Get "js/post-filter.js" | resources.Fingerprint "sha256" }}
+  <script src="{{ $filter.RelPermalink }}" integrity="{{ $filter.Data.Integrity }}" defer data-cfasync="false"></script>
+  {{ end }}
+</body>
+</html>

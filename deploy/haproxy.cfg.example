@@ -1,0 +1,22 @@
+# Illustrative additions to an EXISTING HTTP-mode HTTPS frontend.
+# Retain your existing TLS bind/certificates and unrelated routing.
+# Cloudflare networks must be kept current in these two administrator-managed
+# files, one CIDR per line (https://www.cloudflare.com/ips/).
+# Deny non-Cloudflare ingress in your firewall, or account for direct traffic
+# explicitly as below. Do not copy this as a complete HAProxy configuration.
+
+# frontend https
+#     acl from_cloudflare src -f /etc/haproxy/cloudflare-ips-v4 -f /etc/haproxy/cloudflare-ips-v6
+#     http-request set-var(txn.client_ip) src
+#     http-request set-var(txn.client_ip) req.hdr_ip(CF-Connecting-IP) if from_cloudflare
+#     http-request del-header X-Real-IP
+#     http-request del-header X-Forwarded-For
+#     http-request del-header CF-Connecting-IP
+#     http-request set-header X-Real-IP %[var(txn.client_ip)]
+#     http-request set-header X-Forwarded-For %[var(txn.client_ip)]
+#     http-request set-header X-Forwarded-Proto https
+#     acl blog_host hdr(host) -i blog.sas41.com comments.blog.sas41.com
+#     use_backend blog_nginx if blog_host
+#
+# backend blog_nginx
+#     server nginx YOUR_EXISTING_NGINX_IP:80 check

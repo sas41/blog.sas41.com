@@ -18,7 +18,7 @@
     monospace: "System monospace",
     courier: "Courier New",
   };
-  const defaults = { font: "source-sans-3", size: 18, theme: "dark", width: 700 };
+  const defaults = { font: "source-sans-3", size: 18, theme: "dark", width: 700, dateFormat: "browser" };
   const clamp = (value, min, max, fallback) => typeof value === "number" && Number.isFinite(value)
     ? Math.max(min, Math.min(max, Math.round(value))) : fallback;
   function validate(value) {
@@ -28,6 +28,7 @@
       size: clamp(value.size, 14, 28, defaults.size),
       theme: value.theme === "light" ? "light" : "dark",
       width: clamp(value.width, 520, 1200, defaults.width),
+      dateFormat: value.dateFormat === "iso" ? "iso" : defaults.dateFormat,
     };
   }
   let saved;
@@ -37,6 +38,7 @@
     const root = document.documentElement;
     root.dataset.theme = values.theme;
     root.dataset.readerFont = values.font;
+    root.dataset.dateFormat = values.dateFormat;
     root.style.setProperty("--reader-font-size", `${values.size}px`);
     root.style.setProperty("--reader-width", `${values.width}px`);
   }

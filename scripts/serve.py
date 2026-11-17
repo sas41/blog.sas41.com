@@ -50,13 +50,16 @@ def rebuild(root: Path, output: Path) -> bool:
     return True
 
 
+def configure_environment(port: int) -> None:
+    os.environ.setdefault("HUGO_BASEURL", f"http://localhost:{port}/")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bind", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8081)
     args = parser.parse_args()
-    os.environ.setdefault("HUGO_BASEURL", f"http://localhost:{args.port}/")
-    os.environ.setdefault("HUGO_PARAMS_DISABLECOMMENTS", "true")
+    configure_environment(args.port)
     root = Path(__file__).resolve().parents[1]
     with tempfile.TemporaryDirectory(prefix="blog-preview-") as temp:
         output = Path(temp) / "public"

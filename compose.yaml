@@ -7,7 +7,6 @@ services:
       target: development
     environment:
       HUGO_BASEURL: http://localhost:${BLOG_PORT:-8081}/
-      HUGO_PARAMS_DISABLECOMMENTS: "true"
     volumes:
       - .:/src:ro
     ports:

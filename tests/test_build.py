@@ -21,6 +21,47 @@ SPEC.loader.exec_module(builder)
 NOW = datetime(2026, 11, 17, tzinfo=timezone.utc)
 
 
+class HistoryRenderingTest(unittest.TestCase):
+    def test_history_emits_slider_fragments_and_scriptless_fallback_pages(self):
+        with tempfile.TemporaryDirectory(prefix="blog-history-test-") as temp:
+            output = Path(temp)
+            (output / "index.html").write_text('<link rel="stylesheet" href="/css/site.abc.css"><section data-history-manifest="/__history_manifest__/test-post/"></section>')
+            render = output / "__render" / "test-post" / "0"
+            render.mkdir(parents=True)
+            (render / "index.html").write_text('<h1>Test post</h1>')
+            metadata = {"url": "/test-post/", "title": "Test post"}
+            current = {"test-post": {"metadata": metadata}}
+            histories = {"test-post": [{"metadata": metadata, "date": "2026-11-17T12:34:56Z"}]}
+            builder.finalize_history(output, current, histories, "https://example.test/")
+            archive = output / "history" / "test-post"
+            self.assertTrue((archive / "index.html").exists())
+            self.assertEqual(len(list(archive.glob("*.page.html"))), 1)
+            manifest = json.loads(next(archive.glob("*.json")).read_text())
+            self.assertEqual(manifest["revisions"][0]["date"], "2026-11-17T12:34:56Z")
+            full = output / manifest["revisions"][0]["page"].lstrip("/")
+            self.assertEqual(full.name.split(".")[0], hashlib.sha256(full.read_bytes()).hexdigest())
+            for path in [archive / "index.html", full]:
+                page = path.read_text()
+                self.assertIn('<time class="mono" datetime="2026-11-17T12:34:56Z">2026-11-17 12:34:56 UTC</time>', page)
+                self.assertIn('<link rel="stylesheet" href="/css/site.abc.css">', page)
+                self.assertIn('<meta name="robots" content="noindex,follow">', page)
+                self.assertIn('<base href="/test-post/">', page)
+                self.assertIn('<body class="is-reading-page history-page">', page)
+                self.assertIn('<div class="reading-layout"><article class="post">', page)
+                self.assertIn('href="/index.xml"', page)
+                self.assertNotIn('<script', page)
+            self.assertIn(manifest["revisions"][0]["page"], (archive / "index.html").read_text())
+            self.assertIn('<header class="article-heading">', (archive / "index.html").read_text())
+            self.assertIn('<ol class="history-list">', (archive / "index.html").read_text())
+            self.assertIn('<span class="history-current">Latest</span>', (archive / "index.html").read_text())
+            self.assertIn('<h1>Test post</h1>', full.read_text())
+            fragment = output / manifest["revisions"][0]["fragment"].lstrip("/")
+            self.assertEqual(fragment.read_text(), '<h1>Test post</h1>')
+            self.assertEqual(fragment.stem, hashlib.sha256(fragment.read_bytes()).hexdigest())
+            self.assertNotIn("__history_manifest__", (output / "index.html").read_text())
+            self.assertFalse((output / "__render").exists())
+
+
 class RepositoryTest(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="blog-test-")
@@ -189,7 +230,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertIn("2026-01-02", page)
         self.assertIn("Last Edited", page)
         self.assertIn("2026-01-03", page)
-        self.assertIn('data-comments-url="https://blog.sas41.com/p/test-post/"', page)
+        self.assertNotIn('data-comments-', page)
         self.assertIn("A rich component.", page)
         self.assertIn('rel="canonical" href="https://blog.sas41.com/new-url/"', page)
         self.assertIn('data-reader-toolbar', page)
@@ -197,6 +238,8 @@ class RepositoryTest(unittest.TestCase):
         self.assertIn('aria-label="SAS41 home"', page)
         self.assertIn('class="wordmark-logo" aria-hidden="true"', page)
         self.assertTrue((output / "logo.svg").is_file())
+        self.assertEqual((output / "CNAME").read_text().strip(), "blog.sas41.com")
+        self.assertTrue((output / ".nojekyll").is_file())
         self.assertEqual(page.count('class="reader-icon"'), 3)
         self.assertIn('data-reader-panel="font"', page)
         self.assertIn('data-reader-panel="size"', page)
@@ -206,15 +249,14 @@ class RepositoryTest(unittest.TestCase):
             self.assertIsNotNone(markup)
             self.assertIn('data-reader-reset>Reset reading preferences</button>', markup.group(1))
         self.assertNotIn('Questions, corrections', page)
-        self.assertNotIn('Comments are hosted', page)
         self.assertNotIn('Words, versioned', page)
-        self.assertNotIn('>REMARK42<', page)
-        self.assertIn('Powered by Hugo, Remark42', page)
+        self.assertIn('Powered by Hugo</span>', page)
         self.assertNotIn('Powered by Hugo, NGINX', page)
         self.assertNotIn('document-map-hint', page)
         self.assertIn('data-document-map', page)
         self.assertIn('<details class="document-map-inner" data-document-map-disclosure>', page)
-        self.assertRegex(page, r'<summary id="document-map-heading">[^<]+</summary>')
+        self.assertIn('id="document-map-heading" aria-label="On this post"', page)
+        self.assertIn('class="document-map-logo"', page)
         self.assertLess(page.index('data-document-map-disclosure'), page.index('<article class="post"'))
         self.assertIn('data-heading-trail', page)
         self.assertIn('href="/categories/software/"', page)
@@ -234,7 +276,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertIn('@media (min-width: 1024px)', css)
         self.assertIn('--reader-reserved: 448px', css)
         self.assertIn('@media (min-width: 1280px)', css)
-        self.assertIn(':root:has([data-document-map-disclosure]:not([open])) { --reader-reserved: 208px; }', css)
+        self.assertIn("--reader-reserved: 240px", css)
         self.assertNotIn('.document-map { display: none;', css)
         for font_path in re.findall(r'url\((/fonts/[^)]+)\)', css):
             font = output / font_path.lstrip('/')
@@ -285,41 +327,73 @@ class RepositoryTest(unittest.TestCase):
         self.assertIn('id="a-readable-section"', page)
         self.assertIn('href="#a-readable-section"', page)
         self.assertIn("Ordinary article text.", page)
-        self.assertIn('href="/history/test-post/"', page)
+        self.assertIn('href="/history/test-post/" data-history-toggle>Last Edited', page)
+        self.assertNotIn('history-fallback', page)
+        self.assertNotIn('disabled>Last Edited', page)
         self.assertIn('href="/tags/software/"', page)
-        self.assertIn('data-load-comments hidden', page)
-        self.assertIn('<noscript><p>Enable JavaScript to load comments.</p></noscript>', page)
+        self.assertNotIn('data-load-comments', page)
         self.assertEqual(page.count('data-load-embed hidden'), 2)
         self.assertIn('<noscript><a href="https://example.com/content">Open external content</a></noscript>', page)
         self.assertIn('<noscript><a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Watch on YouTube</a></noscript>', page)
         home = (output / "index.html").read_text()
         self.assertIn('<noscript><p class="filter-help"><a href="/tags/">', home)
         archive = (output / "history" / "test-post" / "index.html").read_text()
-        revisions = re.findall(r'href="(/history/test-post/[^"/]+\.page\.html)"', archive)
-        self.assertEqual(len(revisions), 2)
-        for revision in revisions:
-            historical = (output / revision.lstrip("/")).read_text()
+        self.assertNotIn('<script', archive)
+        manifest_path = re.search(r'data-history-manifest="([^"]+)"', page).group(1)
+        manifest = json.loads((output / manifest_path.lstrip("/")).read_text())
+        self.assertEqual(len(manifest["revisions"]), 2)
+        for revision in manifest["revisions"]:
+            historical = (output / revision["fragment"].lstrip("/")).read_text()
             self.assertIn("Ordinary article text.", historical)
-            self.assertIn('href="/test-post/"', historical)
+            self.assertNotIn("<!doctype", historical.lower())
+            fallback = (output / revision["page"].lstrip("/")).read_text()
+            self.assertIn(revision["page"], archive)
+            self.assertIn("Ordinary article text.", fallback)
+            self.assertIn('href="/test-post/"', fallback)
+            self.assertNotIn('<script', fallback)
 
     @unittest.skipUnless(shutil.which("hugo"), "Hugo not installed")
-    def test_local_preview_urls_and_comments_are_isolated(self):
+    def test_local_preview_urls_and_uncommitted_content(self):
         for directory in ("layouts", "assets", "static"):
             shutil.copytree(PROJECT / directory, self.root / directory)
         shutil.copyfile(PROJECT / "hugo.toml", self.root / "hugo.toml")
-        self.post("Committed version", extra="comments: true\n")
+        self.post("Committed version")
         self.commit()
-        self.post("Local uncommitted version", extra="comments: true\n")
+        self.post("Local uncommitted version")
         output = self.root / "output"
-        with patch.dict(os.environ, HUGO_BASEURL="http://localhost:9000/", HUGO_PARAMS_DISABLECOMMENTS="true"):
+        with patch.dict(os.environ, HUGO_BASEURL="http://localhost:9000/"):
             builder.build(self.root, output, preview=True)
         page = (output / "test-post" / "index.html").read_text()
         self.assertIn("Local uncommitted version", page)
         self.assertIn('rel="canonical" href="http://localhost:9000/test-post/"', page)
-        self.assertNotIn("data-comments-url=", page)
         archive = (output / "history" / "test-post" / "index.html").read_text()
-        self.assertIn("http://localhost:9000/test-post/", archive)
+        self.assertIn('rel="canonical" href="http://localhost:9000/test-post/"', archive)
         self.assertNotIn("https://blog.sas41.com/", archive)
+        manifest_path = re.search(r'data-history-manifest="([^"]+)"', page).group(1)
+        manifest = json.loads((output / manifest_path.lstrip("/")).read_text())
+        self.assertEqual(len(manifest["revisions"]), 2)
+        for revision in manifest["revisions"]:
+            self.assertTrue(revision["fragment"].startswith("/history/test-post/"))
+
+    @unittest.skipUnless(shutil.which("hugo"), "Hugo not installed")
+    def test_static_blog_has_no_comment_integration(self):
+        for directory in ("layouts", "assets", "static"):
+            shutil.copytree(PROJECT / directory, self.root / directory)
+        shutil.copyfile(PROJECT / "hugo.toml", self.root / "hugo.toml")
+        self.post("A static article")
+        self.commit()
+        output = self.root / "output"
+        builder.build(self.root, output, preview=True)
+        page = (output / "test-post" / "index.html").read_text()
+        self.assertNotIn('data-comments-', page)
+        self.assertNotIn('data-load-comments', page)
+        self.assertNotIn('The conversation', page)
+        self.assertFalse((output / 'css/comments.css').exists())
+        for path in output.rglob('*'):
+            if path.is_file() and path.suffix in {'.html', '.js', '.css'}:
+                text = path.read_text()
+                for dependency in ('Artalk', 'comentario', 'remark42', 'challenges.cloudflare.com'):
+                    self.assertNotIn(dependency, text, str(path))
 
     @unittest.skipUnless(shutil.which("hugo"), "Hugo not installed")
     def test_tags_build_current_post_archives_only(self):
@@ -370,7 +444,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertIn('href="/licenses/">Licenses</a>', page)
         post = (output / "test-post" / "index.html").read_text()
         self.assertIn('href="/licenses/">Licenses</a>', post)
-        self.assertNotIn('id="remark42"', page)
+        self.assertNotIn('data-comments-widget', page)
         for name in ("Source Sans 3", "Inter", "Source Serif 4", "Atkinson Hyperlegible", "Lucide"):
             self.assertIn(name, page)
         notices = re.findall(r'href="(/(?:fonts|licenses)/[^"#]+\.txt)"', page)
@@ -379,18 +453,18 @@ class RepositoryTest(unittest.TestCase):
             self.assertTrue((output / notice.lstrip("/")).is_file(), notice)
 
     @unittest.skipUnless(shutil.which("hugo"), "Hugo not installed")
-    def test_first_revision_has_no_slider_and_comments_override(self):
+    def test_first_revision_has_no_slider(self):
         for directory in ("layouts", "assets", "static"):
             shutil.copytree(PROJECT / directory, self.root / directory)
         shutil.copyfile(PROJECT / "hugo.toml", self.root / "hugo.toml")
-        self.post(extra="comments: false\n")
+        self.post()
         self.commit()
         output = self.root / "output"
         builder.build(self.root, output)
         text = (output / "test-post" / "index.html").read_text()
         self.assertNotIn("Last Edited", text)
         self.assertNotIn("revision-panel", text)
-        self.assertNotIn('id="remark42"', text)
+        self.assertNotIn('data-comments-widget', text)
 
 
 class FrontMatterTest(unittest.TestCase):

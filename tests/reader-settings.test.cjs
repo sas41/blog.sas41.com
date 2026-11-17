@@ -27,8 +27,25 @@ test('default font and theme match the requested reading experience', () => {
   assert.equal(api.values.size, 18);
   assert.equal(api.values.theme, 'dark');
   assert.equal(api.values.width, 700);
+  assert.equal(api.values.dateFormat, 'browser');
   assert.equal(document.documentElement.dataset.readerFont, 'source-sans-3');
   assert.equal(properties.get('--reader-width'), '700px');
+});
+
+test('date format is allowlisted, persisted, restored, and reset', () => {
+  const state = boot(null);
+  state.api.set({ dateFormat: 'iso' });
+  assert.equal(state.api.values.dateFormat, 'iso');
+  assert.equal(state.document.documentElement.dataset.dateFormat, 'iso');
+  const restored = boot(state.stored().value);
+  assert.equal(restored.api.values.dateFormat, 'iso');
+  restored.api.set(restored.api.defaults);
+  assert.equal(restored.api.values.dateFormat, 'browser');
+  assert.equal(boot(JSON.stringify({ dateFormat: 'invalid' })).api.values.dateFormat, 'browser');
+  assert.equal(boot(JSON.stringify({ font: 'inter' })).api.values.dateFormat, 'browser');
+  const blocked = boot(null, true);
+  assert.doesNotThrow(() => blocked.api.set({ dateFormat: 'iso' }));
+  assert.equal(blocked.api.values.dateFormat, 'iso');
 });
 
 test('saved preferences are restored before the page is painted', () => {

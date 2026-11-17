@@ -1,6 +1,7 @@
 """Preview watcher tests; do not require Hugo or Docker."""
 
 import importlib.util
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -17,6 +18,17 @@ with patch.dict(sys.modules, {"build": builder}):
 
 
 class PreviewTest(unittest.TestCase):
+    def test_preview_defaults_to_local_base_url(self):
+        with patch.dict(os.environ, {}, clear=True):
+            preview.configure_environment(9000)
+            self.assertEqual(os.environ["HUGO_BASEURL"], "http://localhost:9000/")
+            self.assertEqual(set(os.environ), {"HUGO_BASEURL"})
+
+    def test_preview_preserves_explicit_base_url(self):
+        with patch.dict(os.environ, {"HUGO_BASEURL": "https://preview.example.test/"}, clear=True):
+            preview.configure_environment(9000)
+            self.assertEqual(os.environ["HUGO_BASEURL"], "https://preview.example.test/")
+
     def test_watcher_tracks_source_additions_edits_and_deletions(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

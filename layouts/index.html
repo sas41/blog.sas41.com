@@ -20,7 +20,7 @@
   <div class="post-list">
   {{ range $posts.ByDate.Reverse }}
     <article class="post-card" data-post-card data-post-tags="{{ .Params.tags | default (slice) | jsonify }}">
-      <div class="post-card-meta"><time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006-01-02" }}</time><span>{{ .ReadingTime }} MIN READ</span>{{ range first 1 (.GetTerms "categories") }}<a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>{{ end }}</div>
+      <div class="post-card-meta"><time data-local-time="date" datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Date.Format "2006-01-02" }}</time><span>{{ .ReadingTime }} MIN READ</span>{{ range first 1 (.GetTerms "categories") }}<a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>{{ end }}</div>
       <h3><a href="{{ .RelPermalink }}">{{ .Title }} <span class="post-arrow" aria-hidden="true">↗</span></a></h3>
       <p data-post-summary>{{ .Description | default (.Summary | plainify | truncate 180) }}</p>
       {{ partial "tags.html" . }}

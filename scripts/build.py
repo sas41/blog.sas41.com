@@ -271,30 +271,30 @@ def write_page(path: Path, metadata: dict, body: str) -> None:
     path.write_text(json.dumps(metadata, ensure_ascii=False, default=json_default) + "\n" + body, encoding="utf-8")
 
 
-def fallback_document(title: str, inner: str, *, css: str, canonical: str, base: str, settings: str, post_title: str, category="") -> str:
+def history_document(title: str, inner: str, *, css: str, canonical: str, post_title: str, category="") -> str:
     e = html.escape
     category_crumb = f'<li><span>{e(category)}</span></li>' if category else ''
+    # Keep assets on the host serving this page (including local previews).
+    # The article path is still the base for relative links in old content.
+    article_path = urlsplit(canonical).path
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex,follow"><meta name="color-scheme" content="light dark">
-<script src="{e(settings, quote=True)}" data-cfasync="false"></script>
-<base href="{e(base, quote=True)}"><title>{e(title)} — Sas' Blog</title>
+<meta name="robots" content="noindex,follow"><meta name="color-scheme" content="dark light">
+<base href="{e(article_path, quote=True)}"><title>{e(title)} — Sas' Blog</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="{e(canonical, quote=True)}"><link rel="stylesheet" href="{e(css, quote=True)}"></head>
-<body><a class="skip-link" href="#main">Skip to content</a>
-<div class="site-topbar"><div class="site-topbar-inner"><header class="site-header"><a class="wordmark" href="/">Sas' Blog</a><nav aria-label="Main navigation"><a href="/">Writing</a><a href="/about/">About</a></nav></header>
+<body class="is-reading-page history-page"><a class="skip-link" href="#main">Skip to content</a>
+<div class="site-topbar"><div class="site-topbar-inner"><header class="site-header"><a class="wordmark" href="/" aria-label="SAS41 home"><span class="wordmark-reveal" aria-hidden="true"><span>SAS</span></span><span class="wordmark-logo" aria-hidden="true"></span></a><nav aria-label="Main navigation"><a href="/">Writing</a><a href="/about/">About</a><a href="/index.xml">RSS <span aria-hidden="true">↗</span></a></nav></header>
 <nav class="breadcrumbs" aria-label="Breadcrumb"><ol class="breadcrumb-pages"><li><a href="/">Home</a></li>{category_crumb}<li><a href="{e(canonical, quote=True)}">{e(post_title)}</a></li><li><span aria-current="page">Edit history</span></li></ol></nav></div></div>
-<div class="site-shell"><main id="main" class="archive-page">{inner}</main><footer class="site-footer"><span>Powered by Hugo, Remark42</span><span class="copyright">© {datetime.now(UTC).year} SAS41</span></footer>
+<div class="site-shell"><main id="main"><div class="reading-layout"><article class="post">{inner}</article></div></main><footer class="site-footer"><span>Powered by Hugo</span><a href="/licenses/">Licenses</a><span class="copyright">© {datetime.now(UTC).year} SAS<span class="brand-number">41</span></span></footer>
 </div></body></html>'''
 
 
 def finalize_history(output: Path, current: dict, histories: dict, base_url: str) -> None:
     home_html = (output / "index.html").read_text()
     css_match = re.search(r'<link rel="stylesheet" href="([^"]+)"', home_html)
-    settings_match = re.search(r'<script src="([^"]*reader-settings\.[^"]+)"', home_html)
     if not css_match:
         raise BuildError("Could not find the generated stylesheet")
-    if not settings_match:
-        raise BuildError("Could not find the reading preferences bootstrap")
     css = css_match.group(1)
     replacements = {}
     for identifier, page in current.items():
@@ -303,21 +303,27 @@ def finalize_history(output: Path, current: dict, histories: dict, base_url: str
         revisions = []
         canonical = base_url.rstrip("/") + page["metadata"]["url"]
         e = html.escape
+
+        def revision_time(value: str) -> str:
+            return (f'<time class="mono" datetime="{e(value, quote=True)}">'
+                    f'{e(value.replace("T", " ").replace("Z", " UTC"))}</time>')
+
+        def document(title: str, inner: str) -> str:
+            return history_document(title, inner, css=css, canonical=canonical,
+                                    post_title=page["metadata"]["title"], category=page["metadata"].get("category", ""))
+
         for index, revision in enumerate(histories[identifier]):
             fragment = (output / "__render" / identifier / str(index) / "index.html").read_text(encoding="utf-8")
             digest = hashlib.sha256(fragment.encode()).hexdigest()
             fragment_url = f"/history/{identifier}/{digest}.html"
-            full_inner = (f'<p><a href="{e(page["metadata"]["url"], quote=True)}">← Current article</a> · '
-                          f'<a href="/history/{identifier}/">All revisions</a></p>'
-                          f'<p class="old-revision-notice">Revision {index + 1} of {len(histories[identifier])} · {revision["date"][:10]} (UTC). '
-                          'Historical content, rendered with current templates.</p>' + fragment)
-            full_page = fallback_document(revision["metadata"].get("title", page["metadata"]["title"]), full_inner,
-                                          css=css, canonical=canonical, base=canonical, settings=settings_match.group(1),
-                                          post_title=page["metadata"]["title"], category=page["metadata"].get("category", ""))
-            # Full pages include date/index and stylesheet; hash their actual bytes too.
+            (directory / f"{digest}.html").write_text(fragment, encoding="utf-8")
+            inner = (f'<nav class="history-navigation" aria-label="Revision navigation"><a class="back-link" href="{e(page["metadata"]["url"], quote=True)}">← Current article</a>'
+                     f'<a href="/history/{identifier}/">All revisions →</a></nav>'
+                     f'<p class="old-revision-notice">Revision {index + 1} of {len(histories[identifier])} · {revision_time(revision["date"])}. '
+                     'Historical content, rendered with current templates.</p>' + fragment)
+            full_page = document(revision["metadata"].get("title", page["metadata"]["title"]), inner)
             page_digest = hashlib.sha256(full_page.encode()).hexdigest()
             full_url = f"/history/{identifier}/{page_digest}.page.html"
-            (directory / f"{digest}.html").write_text(fragment, encoding="utf-8")
             (directory / f"{page_digest}.page.html").write_text(full_page, encoding="utf-8")
             revisions.append({"date": revision["date"], "title": revision["metadata"].get("title", ""),
                               "fragment": fragment_url, "page": full_url})
@@ -325,14 +331,15 @@ def finalize_history(output: Path, current: dict, histories: dict, base_url: str
         manifest_digest = hashlib.sha256(manifest.encode()).hexdigest()
         (directory / f"{manifest_digest}.json").write_text(manifest, encoding="utf-8")
         replacements[f"/__history_manifest__/{identifier}/"] = f"/history/{identifier}/{manifest_digest}.json"
-        links = "".join(f'<li><a href="{item["page"]}">Revision {index + 1} · {item["date"][:10]}</a>'
-                        f'{" — latest" if index == len(revisions) - 1 else ""}</li>' for index, item in enumerate(revisions))
-        inner = (f'<p><a href="{e(page["metadata"]["url"], quote=True)}">← Current article</a></p>'
-                 f'<p class="eyebrow">PUBLIC EDIT HISTORY</p><h1>{e(page["metadata"]["title"])}</h1>'
-                 f'<p>Published revisions, oldest first. Dates are UTC.</p><ol class="archive-list">{links}</ol>')
-        (directory / "index.html").write_text(fallback_document("Edit history", inner, css=css, canonical=canonical, base=canonical,
-                                                              settings=settings_match.group(1), post_title=page["metadata"]["title"],
-                                                              category=page["metadata"].get("category", "")), encoding="utf-8")
+        latest_badge = '<span class="history-current">Latest</span>'
+        links = "".join(f'<li><a class="history-entry" href="{item["page"]}"><span class="history-entry-label">Revision {index + 1} '
+                        f'{latest_badge if index == len(revisions) - 1 else ""}</span>'
+                        f'{revision_time(item["date"])}</a></li>' for index, item in enumerate(revisions))
+        inner = (f'<a class="back-link" href="{e(page["metadata"]["url"], quote=True)}">← Current article</a>'
+                 f'<header class="article-heading"><p class="eyebrow">PUBLIC EDIT HISTORY</p><h1>{e(page["metadata"]["title"])}</h1>'
+                 f'<p class="article-description">Published revisions, oldest first. All timestamps are UTC.</p></header>'
+                 f'<ol class="history-list">{links}</ol>')
+        (directory / "index.html").write_text(document("Edit history", inner), encoding="utf-8")
 
     for path in output.rglob("*.html"):
         if "history" in path.relative_to(output).parts or "__render" in path.relative_to(output).parts:
@@ -414,7 +421,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--destination", type=Path, default=Path("public"))
-    parser.add_argument("--preview", action="store_true", help="Allow local, uncommitted content; never used for image publishing")
+    parser.add_argument("--preview", action="store_true", help="Allow local, uncommitted content; never used for publishing")
     args = parser.parse_args()
     try:
         build(args.source, args.destination, preview=args.preview)

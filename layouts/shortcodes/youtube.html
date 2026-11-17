@@ -4,7 +4,7 @@
   <div class="embed-placeholder">
     <span class="mono">EXTERNAL VIDEO / YOUTUBE</span>
     <p>{{ .Get "title" | default "YouTube video" }}</p>
-    <button type="button" class="load-comments" data-load-embed hidden>Load video ↗</button>
+    <button type="button" class="load-embed" data-load-embed hidden>Load video ↗</button>
     <small>Loading connects your browser to YouTube.</small>
     <noscript><a href="https://www.youtube.com/watch?v={{ $id }}">Watch on YouTube</a></noscript>
   </div>

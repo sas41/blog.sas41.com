@@ -4,5 +4,8 @@
 /.env
 /.venv/
 /remark42-data/
+/comentario-data/
+/artalk-data/
+/deploy/artalk.production.yml
 __pycache__/
 *.pyc

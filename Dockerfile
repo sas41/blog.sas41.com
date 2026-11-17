@@ -18,26 +18,7 @@ RUN pip install --no-cache-dir -r requirements-build.txt
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN git config --global --add safe.directory /src
 
-FROM tools AS builder
-COPY . .
-RUN python -m unittest discover -s tests -v \
-    && python scripts/build.py --destination /site
-
-FROM nginx:stable-alpine AS production
-ARG VCS_REF=unknown
-LABEL org.opencontainers.image.title="blog.sas41.com" \
-      org.opencontainers.image.description="Static Markdown blog with a public revision archive" \
-      org.opencontainers.image.revision=$VCS_REF
-COPY deploy/blog-nginx.conf /etc/nginx/nginx.conf
-COPY --from=builder /site /usr/share/nginx/html
-USER 101:101
-EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1
-ENTRYPOINT ["nginx"]
-CMD ["-g", "daemon off;"]
-
-# Default target is a local preview; publishing must select --target production.
+# Docker is only an optional local preview. GitHub Pages hosts the static build.
 FROM tools AS development
 COPY . .
 EXPOSE 8080

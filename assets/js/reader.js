@@ -19,6 +19,7 @@
   const handles = [...document.querySelectorAll("[data-resize]")];
   const panels = [...document.querySelectorAll("[data-reader-panel]")];
   const font = document.querySelector("select[data-reader-font]");
+  const dateFormat = document.querySelector("[data-reader-date-format]");
   const size = document.querySelector("[data-reader-size]");
   const sizeOutput = document.querySelector("[data-font-size]");
   const smaller = document.querySelector("[data-font-smaller]");
@@ -135,6 +136,7 @@
     const values = preferences.values;
     if (toolbar) {
       font.value = values.font;
+      if (dateFormat) dateFormat.value = values.dateFormat;
       size.value = values.size;
       sizeOutput.value = `${values.size}px`;
       smaller.disabled = values.size <= 14;
@@ -142,8 +144,6 @@
       for (const mode of document.querySelectorAll("[data-reader-mode]")) mode.checked = mode.value === values.theme;
     }
     // The widget is optional and may not have been loaded by the reader yet.
-    if (window.remark_config) window.remark_config.theme = values.theme;
-    window.REMARK42?.changeTheme?.(values.theme);
     syncHandles();
     schedule();
   }
@@ -321,6 +321,7 @@
     for (const panel of panels) document.body.append(panel);
     for (const [value, label] of Object.entries(preferences.fonts)) font.add(new Option(label, value));
     font.addEventListener("change", () => preferences.set({ font: font.value }));
+    if (dateFormat) dateFormat.addEventListener("change", () => preferences.set({ dateFormat: dateFormat.value }));
     size.addEventListener("input", () => preferences.set({ size: Number(size.value) }));
     smaller.addEventListener("click", () => preferences.set({ size: preferences.values.size - 1 }));
     larger.addEventListener("click", () => preferences.set({ size: preferences.values.size + 1 }));

@@ -3,7 +3,6 @@ id: licenses
 title: Licenses & credits
 url: /licenses/
 description: The fonts, icons, and software behind this site, with their licenses and original notices.
-comments: false
 ---
 
 This blog is built with open-source software, fonts and icons. Below are their credits and licenses.

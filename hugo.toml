@@ -7,11 +7,6 @@ timeZone = 'UTC'
 [params]
   description = 'Notes on software, systems, and things worth writing down.'
   author = 'SAS41'
-  comments = true
-
-  [params.remark42]
-    host = 'https://comments.blog.sas41.com'
-    site = 'blog.sas41.com'
 
 [markup.goldmark.renderer]
   # Use the explicit html shortcode for exceptional trusted HTML.

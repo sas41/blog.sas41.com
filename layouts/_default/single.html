@@ -19,10 +19,10 @@
 <article class="post" data-post-id="{{ .Params.id }}">
   <a class="back-link" href="/">← All writing</a>
   <div class="post-dates mono">
-    <span>Posted <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Date.Format "2006-01-02" }}</time></span>
+    <span>Posted <time data-local-time="date" datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}" title="{{ .Date.Format "2006-01-02 15:04:05 Z07:00" }}">{{ .Date.Format "2006-01-02" }}</time></span>
     {{ with .Params.history }}{{ if gt .count 1 }}
     <span class="date-divider" aria-hidden="true">/</span>
-    <a class="history-toggle" href="/history/{{ $.Params.id }}/" data-history-toggle aria-controls="revision-panel" aria-expanded="false">Last Edited <time datetime="{{ $.Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">{{ $.Lastmod.Format "2006-01-02" }}</time><span aria-hidden="true"> ↶</span></a>
+    <a class="history-toggle" href="/history/{{ $.Params.id }}/" data-history-toggle>Last Edited <time data-local-time="date" datetime="{{ $.Lastmod.Format "2006-01-02T15:04:05Z07:00" }}" title="{{ $.Lastmod.Format "2006-01-02 15:04:05 Z07:00" }}">{{ $.Lastmod.Format "2006-01-02" }}</time><span aria-hidden="true"> ↶</span></a>
     {{ end }}{{ end }}
   </div>
   {{ with .Params.history }}{{ if gt .count 1 }}
@@ -33,12 +33,10 @@
     <datalist id="revision-ticks">{{ range seq 0 (sub .count 1) }}<option value="{{ . }}"></option>{{ end }}</datalist>
     <div class="revision-endpoints mono"><span>Original</span><button type="button" class="text-button" data-history-latest>Latest →</button></div>
     <p class="history-error" data-history-error role="alert" hidden></p>
-    <a class="history-fallback" href="/history/{{ $.Params.id }}/">Browse all revisions without the slider ↗</a>
   </section>
   {{ end }}{{ end }}
-  <p class="old-revision-notice" data-old-revision hidden>You're reading an older revision. Comments apply to the post as a whole.</p>
+  <p class="old-revision-notice" data-old-revision hidden>You're reading an older revision.</p>
   <div id="post-content" data-article-content>{{ partial "article-content.html" . }}</div>
-  {{ partial "comments.html" . }}
 </article>
 </div>
 {{ end }}

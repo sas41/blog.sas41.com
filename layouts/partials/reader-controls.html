@@ -2,7 +2,7 @@
   <div class="reader-toolbar" data-reader-toolbar aria-label="Reading preferences" role="group" hidden>
     <button type="button" class="reader-icon" data-reader-open="font" aria-label="Font" title="Font" aria-controls="reader-font-panel" aria-expanded="false">{{ partial "icon.html" "type" }}</button>
     <button type="button" class="reader-icon" data-reader-open="size" aria-label="Font size" title="Font size" aria-controls="reader-size-panel" aria-expanded="false">{{ partial "icon.html" "a-large-small" }}</button>
-    <button type="button" class="reader-icon" data-reader-open="theme" aria-label="Light/dark mode" title="Light/dark mode" aria-controls="reader-theme-panel" aria-expanded="false">{{ partial "icon.html" "sun-moon" }}</button>
+    <button type="button" class="reader-icon" data-reader-open="theme" aria-label="Appearance" title="Appearance" aria-controls="reader-theme-panel" aria-expanded="false">{{ partial "icon.html" "sun-moon" }}</button>
   </div>
 </div>
 <section id="reader-font-panel" class="reader-popover" data-reader-panel="font" aria-label="Font preferences" hidden>
@@ -25,5 +25,10 @@
     <label class="reader-mode"><input type="radio" name="reader-mode" value="dark" data-reader-mode checked>Dark</label>
     <label class="reader-mode"><input type="radio" name="reader-mode" value="light" data-reader-mode>Light</label>
   </fieldset>
+  <label for="reader-date-format">Date and time format</label>
+  <select id="reader-date-format" data-reader-date-format>
+    <option value="browser">Browser default</option>
+    <option value="iso">ISO date / 24-hour time</option>
+  </select>
   <button type="button" class="text-button" data-reader-reset>Reset reading preferences</button>
 </section>

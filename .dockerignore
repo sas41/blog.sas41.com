@@ -16,7 +16,11 @@
 !tests
 !tests/**
 !requirements-build.txt
-!deploy
-!deploy/blog-nginx.conf
+!compose.yaml
+!.env.example
+!.gitignore
+!.github
+!.github/workflows
+!.github/workflows/**
 **/__pycache__
 **/*.pyc

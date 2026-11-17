@@ -2,6 +2,38 @@
 (() => {
   "use strict";
 
+  const locales = typeof navigator === "undefined" ? undefined : navigator.languages;
+  const dateFormat = new Intl.DateTimeFormat(locales);
+  const timestampFormat = new Intl.DateTimeFormat(locales, {
+    year: "numeric", month: "numeric", day: "numeric",
+    hour: "numeric", minute: "2-digit", second: "2-digit", timeZoneName: "short",
+  });
+  const useISO = () => document.documentElement?.dataset.dateFormat === "iso";
+  const pad = (value) => String(value).padStart(2, "0");
+  function localDate(date) {
+    return `${String(date.getFullYear()).padStart(4, "0")}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+  function formatTimestamp(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    if (!useISO()) return timestampFormat.format(date);
+    // ISO-style presentation in local time, not toISOString()'s UTC date.
+    const offset = -date.getTimezoneOffset();
+    const zone = `UTC${offset < 0 ? "-" : "+"}${pad(Math.floor(Math.abs(offset) / 60))}:${pad(Math.abs(offset) % 60)}`;
+    return `${localDate(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${zone}`;
+  }
+  function updateDates() {
+    for (const time of document.querySelectorAll("time[data-local-time]")) {
+      const fullTimestamp = formatTimestamp(time.dateTime);
+      const date = new Date(time.dateTime);
+      time.title = fullTimestamp;
+      time.textContent = time.dataset?.localTime === "date" && !Number.isNaN(date.getTime())
+        ? (useISO() ? localDate(date) : dateFormat.format(date)) : fullTimestamp;
+    }
+  }
+  updateDates();
+  window.addEventListener("reader-settings-change", updateDates);
+
   document.addEventListener("click", (event) => {
     const button = event.target.closest("[data-load-embed]");
     if (!button) return;
@@ -25,44 +57,16 @@
   enableEmbeds();
   document.addEventListener("article-revision-change", enableEmbeds);
 
-  const comments = document.querySelector("[data-comments-host]");
-  if (comments) {
-    const button = comments.querySelector("[data-load-comments]");
-    button.addEventListener("click", () => {
-      button.disabled = true;
-      button.textContent = "Loading comments…";
-      window.remark_config = {
-        host: comments.dataset.commentsHost,
-        site_id: comments.dataset.commentsSite,
-        url: comments.dataset.commentsUrl,
-        page_title: comments.dataset.commentsTitle,
-        components: ["embed"],
-        theme: document.documentElement.dataset.theme === "light" ? "light" : "dark",
-        locale: "en",
-        show_email_subscription: false,
-        show_telegram_subscription: false,
-      };
-      const script = document.createElement("script");
-      script.type = "module";
-      script.src = `${window.remark_config.host}/web/embed.mjs`;
-      script.dataset.cfasync = "false";
-      script.addEventListener("load", () => {
-        window.REMARK42?.changeTheme?.(document.documentElement.dataset.theme === "light" ? "light" : "dark");
-        button.hidden = true;
-      });
-      script.addEventListener("error", () => {
-        script.remove();
-        button.disabled = false;
-        button.textContent = "Comments unavailable — retry";
-      });
-      document.head.append(script);
-    });
-    button.hidden = false;
-  }
-
   const panel = document.querySelector("[data-history-manifest]");
-  const toggle = document.querySelector("[data-history-toggle]");
-  if (!panel || !toggle) return;
+  const historyLink = document.querySelector("[data-history-toggle]");
+  if (!panel || !historyLink) return;
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = historyLink.className;
+  toggle.innerHTML = historyLink.innerHTML;
+  toggle.setAttribute("data-history-toggle", "");
+  toggle.setAttribute("aria-controls", "revision-panel");
+  toggle.setAttribute("aria-expanded", "false");
 
   const slider = panel.querySelector("input[type=range]");
   const status = panel.querySelector("[data-revision-status]");
@@ -97,10 +101,13 @@
   function describe(index) {
     const revision = manifest.revisions[index];
     const latest = index === manifest.revisions.length - 1;
-    const label = `Revision ${index + 1} of ${manifest.revisions.length} · ${revision.date.slice(0, 10)}${latest ? " · Latest" : ""}`;
+    const label = `Revision ${index + 1} of ${manifest.revisions.length} · ${formatTimestamp(revision.date)}${latest ? " · Latest" : ""}`;
     status.textContent = label;
     slider.setAttribute("aria-valuetext", label);
   }
+  window.addEventListener("reader-settings-change", () => {
+    if (manifest) describe(displayed);
+  });
 
   async function loadManifest() {
     if (manifest) return;
@@ -146,7 +153,7 @@
         await animation.finished;
       }
       if (token !== generation) return;
-      // These fragments are trusted, same-origin build artifacts, not comment HTML.
+      // These fragments are trusted, same-origin build artifacts.
       content.innerHTML = html;
       document.dispatchEvent(new CustomEvent("article-revision-change"));
       animation?.cancel();
@@ -160,7 +167,7 @@
       if (token !== generation || failure.name === "AbortError") return;
       slider.value = String(displayed);
       describe(displayed);
-      error.textContent = "This revision could not be loaded. Please retry, use the revision archive, or refresh if the site was just updated.";
+      error.textContent = "This revision could not be loaded. Please retry or refresh if the site was just updated.";
       error.hidden = false;
     }
   }
@@ -176,7 +183,7 @@
       slider.focus();
     } catch {
       status.textContent = "History unavailable";
-      error.textContent = "Could not load history. Try opening it again, or use the revision archive below.";
+      error.textContent = "Could not load history. Try opening it again or refresh the page.";
       error.hidden = false;
     }
   });
@@ -191,4 +198,6 @@
     select(Number(slider.max));
   });
   slider.addEventListener("input", () => select(Number(slider.value)));
+  // Keep the working archive link unless the inline history UI is ready.
+  historyLink.replaceWith(toggle);
 })();

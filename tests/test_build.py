@@ -475,6 +475,14 @@ class FrontMatterTest(unittest.TestCase):
         self.assertIsInstance(config["title"], str)
         self.assertTrue(config["title"].strip())
 
+    def test_markdown_supports_superscript_and_trusted_html(self):
+        import tomllib
+
+        config = tomllib.loads((PROJECT / "hugo.toml").read_text())
+        goldmark = config["markup"]["goldmark"]
+        self.assertTrue(goldmark["extensions"]["extras"]["superscript"]["enable"])
+        self.assertTrue(goldmark["renderer"]["unsafe"])
+
     def test_comma_separated_and_list_tags(self):
         self.assertEqual(builder.normalize_tags(" Software, systems, software, , long tag ", "test"),
                          ["Software", "systems", "long tag"])

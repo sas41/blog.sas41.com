@@ -11,3 +11,4 @@ comments: true
 This first post serves as a testing ground for the comments and the edit-time line.
 I think it's important that what was said is not lost to time, that it's not just silently changed.
 
+Above, you can see the last edit date, and by clicking on it, you can see a timeline of updates.
